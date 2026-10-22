@@ -1,11 +1,28 @@
-import {z} from 'zod'
-import { UserRole } from './auth.types'
+import { z } from 'zod';
+import { UserRole } from './auth.types';
 
+export const registerSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
 
-export const entrySchema = z.object({
-  name: z.string(),
-  email: z.string(),
-  password: z.string(),
-  role: z.nativeEnum(UserRole).optional(),
-})
-// middleware
+export const loginSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+const allowedRoles = Object.values(UserRole).filter((r) => r !== UserRole.SUPER_ADMIN);
+
+export const updateRoleSchema = z.object({
+  role: z.nativeEnum(UserRole, {
+    error: () => ({
+      message: `Role must be one of: ${allowedRoles.join(', ')}`,
+    }),
+  }).refine((role) => role !== UserRole.SUPER_ADMIN, {
+    message: 'Assigning SUPER_ADMIN role is not allowed',
+  }),
+});
+
+// Keep for backward compatibility
+export const entrySchema = registerSchema;

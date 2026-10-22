@@ -1,17 +1,9 @@
 import { Sequelize } from 'sequelize';
-import dotenv from 'dotenv';
+import { env } from './config/env';
 
-dotenv.config();
-
-const dbName = process.env.DB_NAME as string;
-const dbUser = process.env.DB_USER as string;
-const dbPass = process.env.DB_PASS as string;
-const dbHost = process.env.DB_HOST || 'localhost';
-const dbPort = Number(process.env.DB_PORT) || 5432;
-
-const sequelize = new Sequelize(dbName, dbUser, dbPass, {
-  host: dbHost,
-  port: dbPort,
+const sequelize = new Sequelize(env.db.name, env.db.user, env.db.pass, {
+  host: env.db.host,
+  port: env.db.port,
   dialect: 'postgres',
   logging: false,
 });

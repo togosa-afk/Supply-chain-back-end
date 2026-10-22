@@ -1,82 +1,60 @@
+import { Request, Response } from 'express';
+import { authService } from './auth.service';
+import { UserRole, type globalRole } from './auth.types';
+import { AuthRequest } from '../../middleware/auth.middleware';
 
-import { Request, Response } from "express";
-import bcrypt from "bcrypt";
-import User from "../../models/user";
-import { type RegisterInput, UserRole } from "./auth.types";
-import jwt from "jsonwebtoken";
-
-const secretKey = process.env.JWT_SECRET;
-if (!secretKey) {
-    throw new Error("JWT_SECRET environment variable is not set");
-}
-
-export const register = async (req: Request, res: Response) => {
-    try {
-        const { name, email, password, role } = req.body;
-        const exsistigUser = await User.findOne({ where: { email } }) // TODO: move to service
-
-        if (exsistigUser) {
-            return res.status(400).json({ message: "email already exists" })
-        }
-
-        if (!name || !email || !password) {
-            return res.status(400).json({ message: "fill all the blanks" })
-        }
-
-        const salt = await bcrypt.genSalt(10)
-        const passwordHash = await bcrypt.hash(password, salt)
-
-        const newUser = new User({
-            name,
-            email,
-            password: passwordHash,
-            role: UserRole.CUSTOMER
-        })
-
-        await newUser.save();
-
-        res.status(201).json({ message: "user registered", })
-    } catch (error) {
-        res.status(500).json({ message: "internal server error" })
+export const register = async (req: Request, res: Response): Promise<void> => {
+  try {
+    await authService.register(req.body);
+    res.status(201).json({ message: 'User registered successfully' });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'EMAIL_EXISTS') {
+      res.status(400).json({ message: 'Email already exists' });
+    } else {
+      res.status(500).json({ message: 'Internal server error' });
     }
-}
+  }
+};
 
-export const login = async (req: Request, res: Response) => {
-    try {
-        const { email, password } = req.body
-
-        if (!email || !password) {
-            return res.status(400).json({ message: "fill the blanks" })
-        }
-
-        const user = await User.findOne({ where: { email } }); // move to servise
-
-        if (!user) {
-            return res.status(404).json({ message: "user not found" })
-        }
-
-        const passwordMatch = await bcrypt.compare(password, user.password);
-
-        if (!passwordMatch) {
-            return res.status(401).json({ message: "invalid credintials" })
-        }
-
-        const token = jwt.sign(
-            { email: user.email },
-            secretKey,
-            { expiresIn: "1d" }
-        )
-
-        res.status(200).json({
-            message: "user logged in successfully",
-            token,
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-            },
-        });
-    }catch(error){
-        res.status(500).json({message:"internal server error"})
+export const login = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, password } = req.body;
+    const result = await authService.login(email, password);
+    res.status(200).json({ message: 'Logged in successfully', ...result });
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === 'USER_NOT_FOUND') {
+        res.status(404).json({ message: 'User not found' });
+      } else if (error.message === 'INVALID_CREDENTIALS') {
+        res.status(401).json({ message: 'Invalid credentials' });
+      } else {
+        res.status(500).json({ message: 'Internal server error' });
+      }
+    } else {
+      res.status(500).json({ message: 'Internal server error' });
     }
-}
+  }
+};
+
+export const updateRole = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const email = req.user!.email;
+    const { role } = req.body;
+    if (role === UserRole.SUPER_ADMIN) {
+      res.status(403).json({ message: 'Cannot assign SUPER_ADMIN role' });
+      return;
+    }
+    const user = await authService.updateRole(email, role as globalRole);
+    res.status(200).json({ message: `Role updated successfully for ${email}`, user });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'USER_NOT_FOUND') {
+      res.status(404).json({ message: 'User not found' });
+    } else if (error instanceof Error && error.message === 'FORBIDDEN_ROLE') {
+      res.status(403).json({ message: 'Cannot assign SUPER_ADMIN role' });
+    } else if (error instanceof Error && error.message === 'CAN\'T_CHANGE_ROLE') {
+      res.status(403).json({ message: 'Cannot change role' });
+    } else {
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  }
+};

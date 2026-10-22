@@ -9,6 +9,7 @@ export enum UserRole {
   LOGISTICS_PROVIDER = 'LOGISTICS_PROVIDER',
   SUPER_ADMIN = 'SUPER_ADMIN',
 }
+export type globalRole = Exclude<UserRole, UserRole.SUPER_ADMIN>
 
 export interface User {
   id: string
