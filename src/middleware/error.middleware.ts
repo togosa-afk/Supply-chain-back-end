@@ -8,7 +8,8 @@ export const errorMiddleware = (
   _next: NextFunction
 ): void => {
   if (error instanceof z.ZodError) {
-    res.status(400).json({ message: 'Validation error', errors: error.issues });
+    const message = error.issues[0]?.message || 'Validation error';
+    res.status(400).json({ message, errors: error.issues });
   } else if (error instanceof Error) {
     res.status(500).json({ message: error.message });
   } else {

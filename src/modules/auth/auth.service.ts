@@ -10,6 +10,9 @@ const register = async (data: RegisterDto): Promise<void> => {
   if (existing) throw new Error('EMAIL_EXISTS');
 
   const passwordHash = await bcrypt.hash(data.password, 10);
+  if(data.role === UserRole.SUPER_ADMIN){
+    throw new Error('CAN\'T_REGISTER_WITH_THIS_ROLR')
+  }
   await userRepository.create({
     ...data,
     password: passwordHash,

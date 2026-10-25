@@ -9,7 +9,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
     if (error instanceof Error && error.message === 'EMAIL_EXISTS') {
-      res.status(400).json({ message: 'Email already exists' });
+      res.status(409).json({ message: 'Email already exists' });
+    } else if (error instanceof Error && error.message === 'CAN\'T_REGISTER_WITH_THIS_ROLR'){
+      res.status(403).json({message:'Cannot assign SUPER_ADMIN role'})
     } else {
       res.status(500).json({ message: 'Internal server error' });
     }

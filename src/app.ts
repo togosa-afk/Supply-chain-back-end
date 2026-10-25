@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { errorMiddleware } from './middleware/error.middleware';
 import routerApp from './modules/auth/auth.routes';
+import sequelize from './db';
 
 export const createApp = () => {
   const app = express();
@@ -16,6 +17,11 @@ export const createApp = () => {
       status: 'ok',
       service: 'SupplyChain Marketplace API',
     });
+  });
+
+  app.post('/reset', async (_req, res) => {
+    await sequelize.query('TRUNCATE TABLE "users" RESTART IDENTITY CASCADE;');
+    res.status(204).end();
   });
 
   app.use(errorMiddleware);

@@ -2,6 +2,7 @@ import { UserRole, type globalRole } from './auth.types';
 
 // --- Input DTOs ---
 export interface RegisterDto {
+  role: Omit<UserRole ,UserRole.SUPER_ADMIN>;
   name: string;
   email: string;
   password: string;

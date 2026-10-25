@@ -6,6 +6,10 @@
 
 ---
 
+[🇸🇦 النسخة العربية](README.md) | [🇬🇧 English Version](README_EN.md)
+
+---
+
 ## 🛠️ التقنيات المستخدمة (Tech Stack)
 
 - **بيئة التشغيل:** Node.js مع أداة `tsx` للتنفيذ المباشر لملفات TypeScript في بيئة التطوير.
@@ -15,6 +19,7 @@
 - **واجهة الاستعلامات:** GraphQL مع Apollo Server v5 (`@apollo/server`).
 - **المصادقة والأمان:** JSON Web Tokens (JWT) وتشفير كلمات المرور عبر `bcrypt`.
 - **التحقق من صحة البيانات (Validation):** Zod (v4).
+- **الاختبارات الآلية (Automated Testing):** Vitest (v5) كبيئة اختبار سريعة، و Supertest لاختبار واجهات Express البرمجية، و Axios لطلبات HTTP.
 
 ---
 
@@ -26,8 +31,15 @@ Supply Chain Monitor-back-end/
 ├── .gitignore                  # الملفات المستثناة من Git
 ├── package.json               # إعدادات الحزم والاعتماديات والسكربتات
 ├── tsconfig.json              # إعدادات مترجم TypeScript
+├── vitest.config.ts           # إعدادات بيئة الاختبارات Vitest
+├── tests/                     # مجلد الاختبارات الآلية
+│   ├── helper.ts              # أدوات مساعدة للاختبارات (Seed, Login, Reset)
+│   ├── health ckheck/
+│   │   └── health.test.ts     # اختبار فحص صحة التطبيق عبر Supertest
+│   └── auth tests/
+│       └── register.test.ts   # اختبارات تسجيل الحساب والمصادقة
 ├── src/
-│   ├── app.ts                 # إعداد تطبيق Express والميدلويرز العامة
+│   ├── app.ts                 # إعداد تطبيق Express والميدلويرز ومسارات الاختبار
 │   ├── server.ts              # نقطة البداية وتشغيل السيرفر وقاعدة البيانات و GraphQL
 │   ├── db.ts                  # تهيئة الاتصال بقاعدة بيانات PostgreSQL
 │   ├── config/
@@ -61,8 +73,9 @@ Supply Chain Monitor-back-end/
 
 | الملف | الوظيفة والشرح |
 | :--- | :--- |
-| `package.json` | يحتوي على بيانات المشروع، وتحديد السكربتات التشغيلية (`dev` عبر `tsx watch`، `build` عبر `tsc`، `start` عبر `tsx`)، وجميع مكتبات الـ Dependencies والـ DevDependencies. |
-| `tsconfig.json` | ملف إعدادات مترجم TypeScript، يحدد الإصدارات المدعومة (`ES2022`, `Bundler`)، مسارات المخرجات (`./dist`)، وتفعيل فحص الأنماط الصارم (`strict: true`). |
+| `package.json` | يحتوي على بيانات المشروع، وتحديد السكربتات التشغيلية (`dev` عبر `tsx watch`، `build` عبر `tsc`، `start` عبر `tsx`، و `test` عبر `vitest run`)، وجميع مكتبات الـ Dependencies والـ DevDependencies. |
+| `tsconfig.json` | ملف إعدادات مترجم TypeScript، يحدد الإصدارات المدعومة (`ES2022`, `Bundler`)، مسارات المخرجات (`./dist`)، تفعيل فحص الأنماط الصارم (`strict: true`)، وتضمين أنواع `vitest/globals`. |
+| `vitest.config.ts` | ملف إعدادات بيئة الاختبار Vitest، يحدد بيئة التشغيل `node`، تفعيل الدوال العامة للاختبار (`globals: true`)، وضبط متغيرات بيئة اختبارية مستقلة (`env`) لـ JWT وقاعدة البيانات والمنفذ. |
 | `.env` | يحتوي على الإعدادات الحساسة الخاصة بالبيئة محلياً (بيانات اتصال PostgreSQL مثل اسم المستخدم وكلمة المرور وقاعدة البيانات، ورقم المنفذ `PORT`، والـ `JWT_SECRET`). |
 | `.gitignore` | يحدد الملفات والمجلدات التي لا يجب رفعها إلى مستودع Git مثل `node_modules` و `dist` وملفات البيئة `.env`. |
 
@@ -72,8 +85,8 @@ Supply Chain Monitor-back-end/
 
 | الملف | الوظيفة والشرح |
 | :--- | :--- |
-| `src/server.ts` | **نقطة الدخول الرئيسية للتطبيق (Entry Point):** يقوم بالاتصال بقاعدة البيانات، تشغيل تطبيق Express، دمج خادم Apollo Server لمسار GraphQL (`/graphql`)، وتشغيل السيرفر للإنصات على المنفذ المحدد. |
-| `src/app.ts` | **مصنع تطبيق Express (`createApp`):** يقوم بإعداد الميدلويرز العامة (CORS, Express JSON Body Parser)، وتسجيل مسارات الـ REST API تحت البادئة `/api`، وإضافة مسار فحص الحالة السريع (`/health`)، وربط معالج الأخطاء المركزي. |
+| `src/server.ts` | **نقطة الدخول الرئيسية للتطبيق (Entry Point):** يقوم بالاتصال بقاعدة البيانات، تشغيل تطبيق Express، دمج خادم Apollo Server لمسار GraphQL (`/graphql`)، وتشغيل السيرفر للإنصات على المنفذ المحدد عبر كائن `env.port`. |
+| `src/app.ts` | **مصنع تطبيق Express (`createApp`):** يقوم بإعداد الميدلويرز العامة (CORS, Express JSON Body Parser)، وتسجيل مسارات الـ REST API تحت البادئة `/api`، ومسار فحص الحالة (`/health`)، ومسار تصفير البيانات (`POST /reset`) المخصص لبيئة الاختبارات، وربط معالج الأخطاء المركزي. |
 | `src/db.ts` | **تهيئة قاعدة البيانات:** يقوم بإنشاء اتصال Sequelize بقاعدة بيانات PostgreSQL باستخدام إعدادات البيئة، ويصدر دالة `connectDB()` لاختبار الاتصال ومزامنة الجداول (`sequelize.sync()`). |
 | `src/config/env.ts` | **إدارة إعدادات البيئة:** يتحقق برمجياً من وجود المتغيرات الإلزامية مثل `JWT_SECRET` وبيانات قاعدة البيانات ويطلق خطأ واضح في حال غياب أي متغير، مع تصدير كائن `env` موحد وآمن لجميع أجزاء المشروع. |
 
@@ -123,16 +136,30 @@ Supply Chain Monitor-back-end/
 
 ---
 
+### 7. مجلد الاختبارات الآلية (`tests/`)
+
+| الملف / المجلد | الوظيفة والشرح |
+| :--- | :--- |
+| `tests/helper.ts` | **أدوات ودوال مساعدة للاختبارات (Test Utilities):** يحتوي على دوال تسهيل وتوحيد بيئة الاختبار: `resetDatabase` (لتنظيف الجداول عبر `/reset`)، و `createUser` (لإنشاء مستخدم تجريبي عبر API)، و `login` (لتسجيل الدخول واستخراج JWT Token)، و `resetAndSeed` (لإعادة ضبط القاعدة وإنشاء مستخدمين وتوكنات جاهزة للفحص). |
+| `tests/health ckheck/health.test.ts` | **اختبار فحص حالة التطبيق:** يختبر مسار `GET /health` مباشرة باستخدام مكتبة `supertest` بالحقن المباشر لتطبيق `createApp()` والتحقق من كود الاستجابة `200` ومطابقة بنية الجسم `{ status: 'ok', service: '...' }`. |
+| `tests/auth tests/register.test.ts` | **اختبارات وحدة المصادقة والتسجيل:** يختبر عمليات تسجيل المستخدمين الجدد وتفاعل المسارات مع البيانات الصحيحة وغير الصحيحة. |
+
+---
+
 ## 🌐 نقاط النهاية المتوفرة (API Endpoints)
 
 جميع مسارات REST تبدأ بـ `/api`:
 
-### 1. المسارات العامة
-- `GET /health`: فحص حالة السيرفر للتأكد من عمله.
+### 1. المسارات العامة ومسارات الاختبار
+- `GET /health`
+  - **الوظيفة:** فحص حالة السيرفر للتأكد من عمله وتوافره.
+- `POST /reset`
+  - **الوظيفة:** تصفير جداول قاعدة البيانات وإعادة ترقيم المفاتيح (`TRUNCATE TABLE ... RESTART IDENTITY CASCADE`).
+  - **الاستخدام:** مخصص لبيئة التطوير والاختبارات الآلية (Testing Helper) لضمان عزل البيانات بين الاختبارات.
 
 ### 2. المصادقة (`/api/auth`)
 - `POST /api/auth/register`
-  - **الوظيفة:** تسجيل مستخدم جديد.
+  - **الوظيفة:** تسجيل مستخدم جديد (يُسند له تلقائياً دور `CUSTOMER`).
   - **الحماية:** عام (يتطلب Body يطابق `registerSchema`).
   - **المدخلات:** `{ "name": "...", "email": "...", "password": "..." }`
 - `POST /api/auth/login`
@@ -140,9 +167,12 @@ Supply Chain Monitor-back-end/
   - **الحماية:** عام (يتطلب Body يطابق `loginSchema`).
   - **المدخلات:** `{ "email": "...", "password": "..." }`
 - `PATCH /api/auth/updaterole`
-  - **الوظيفة:** تعديل دور مستخدم.
+  - **الوظيفة:** ترقية وتعديل دور مستخدم.
   - **الحماية:** يتطلب تسجيل دخول (`Authorization: Bearer <token>`).
-  - **المدخلات:** `{ "email": "...", "role": "MERCHANT | MANUFACTURER | LOGISTICS_PROVIDER | ..." }`
+  - **المدخلات:** `{ "email": "...", "role": "MERCHANT | MANUFACTURER | LOGISTICS_PROVIDER" }`
+  - **سياسات الأمان المطبقة (Security Policies):**
+    - يمنع منعاً باتاً إسناد دور مدير النظام (`SUPER_ADMIN`) عبر الـ API.
+    - يُسمح بتعديل الدور فقط إذا كان الحساب حالياً يحمل دور عميل (`CUSTOMER`)، ولا يمكن تغيير الدور لأي مستخدم تم ترقيته مسبقاً.
 
 ### 3. مسار GraphQL
 - `POST /graphql` (أو عبر المتصفح لفتح واجهة Apollo Sandbox):
@@ -186,4 +216,13 @@ npm run dev
 ```bash
 npm run build
 npm start
+```
+
+### 5. تشغيل الاختبارات الآلية (Testing)
+```bash
+# تشغيل جميع الاختبارات لمرة واحدة (Vitest Run)
+npm test
+
+# تشغيل الاختبارات في وضع المراقبة التفاعلي (Watch Mode)
+npx vitest
 ```
