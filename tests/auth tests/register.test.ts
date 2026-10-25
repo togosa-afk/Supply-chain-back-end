@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, afterAll } from 'vitest';
+import { describe, expect, it, beforeAll, beforeEach, afterAll } from 'vitest';
 import supertest from 'supertest';
 import bcrypt from 'bcrypt';
 import { createApp } from '../../src/app';
@@ -15,6 +15,10 @@ const validUser = { email: 'test@example.com', name: 'mohammed', password: '1234
 const { name, ...missingName } = validUser;
 
 describe('register', () => {
+
+  beforeAll(async () => {
+    await sequelize.sync();
+  });
 
   beforeEach(async () => {
     await User.destroy({ where: { email: 'test@example.com' } });
