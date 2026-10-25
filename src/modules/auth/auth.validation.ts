@@ -20,8 +20,6 @@ export const updateRoleSchema = z.object({
     error: () => ({
       message: `Role must be one of: ${allowedRoles.join(', ')}`,
     }),
-  }).refine((role) => role !== UserRole.SUPER_ADMIN, {
-    message: 'Assigning SUPER_ADMIN role is not allowed',
   }),
 });
 
