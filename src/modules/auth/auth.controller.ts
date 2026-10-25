@@ -26,7 +26,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'USER_NOT_FOUND') {
-        res.status(404).json({ message: 'User not found' });
+        res.status(401).json({ message: 'User not found' });
       } else if (error.message === 'INVALID_CREDENTIALS') {
         res.status(401).json({ message: 'Invalid credentials' });
       } else {

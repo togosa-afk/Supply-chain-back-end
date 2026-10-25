@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    fileParallelism: false,
     env: {
       JWT_SECRET: 'test-secret-only-for-tests',
       NODE_ENV:"test",
