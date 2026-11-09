@@ -10,7 +10,7 @@ const register = async (data: RegisterDto): Promise<void> => {
   if (existing) throw new Error('EMAIL_EXISTS');
 
   const passwordHash = await bcrypt.hash(data.password, 10);
-  if(data.role === UserRole.SUPER_ADMIN){
+  if (data.role === UserRole.SUPER_ADMIN) {
     throw new Error('CAN\'T_REGISTER_WITH_THIS_ROLR')
   }
   await userRepository.create({
@@ -40,7 +40,7 @@ const login = async (email: string, password: string): Promise<LoginResponseDto>
 };
 
 const updateRole = async (email: string, role: globalRole): Promise<UserResponseDto> => {
-  
+
   if ((role as UserRole) === UserRole.SUPER_ADMIN) {
     throw new Error('FORBIDDEN_ROLE');
   }
@@ -53,7 +53,7 @@ const updateRole = async (email: string, role: globalRole): Promise<UserResponse
   }
 
   await userRepository.updateRole(user.id, role);
-  
+
   return { id: user.id, name: user.name, email: user.email, role };
 };
 

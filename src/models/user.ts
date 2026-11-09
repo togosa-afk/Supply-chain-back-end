@@ -17,35 +17,35 @@ class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
 }
 
 User.init({
-  id:{
+  id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
   },
-  name:{
+  name: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  email:{
+  email: {
     type: DataTypes.STRING,
     allowNull: false,
     unique: true,
   },
-  password:{
+  password: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  role:{
+  role: {
     type: DataTypes.ENUM(...Object.values(UserRole)),
     allowNull: false,
     defaultValue: UserRole.CUSTOMER,
   }
 },
-{
-  sequelize,
-  modelName: 'User',
-  tableName: 'users',
-}
+  {
+    sequelize,
+    modelName: 'User',
+    tableName: 'users',
+  }
 )
 
 export { User }
