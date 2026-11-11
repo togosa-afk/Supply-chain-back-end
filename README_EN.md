@@ -37,7 +37,9 @@ Supply Chain Monitor-back-end/
 │   ├── health ckheck/
 │   │   └── health.test.ts     # Supertest health check verification
 │   └── auth tests/
-│       └── register.test.ts   # Authentication and registration tests
+│       ├── register.test.ts   # Registration tests
+│       ├── login.test.ts      # Login tests
+│       └── updaterole.test.ts # Role update tests
 ├── src/
 │   ├── app.ts                 # Express application factory, middlewares & test routes
 │   ├── server.ts              # Server bootstrap, DB connection & GraphQL integration
@@ -50,12 +52,14 @@ Supply Chain Monitor-back-end/
 │   │   ├── auth.middleware.ts     # JWT authentication middleware
 │   │   ├── error.middleware.ts    # Centralized error handling middleware
 │   │   ├── validate.middleware.ts # Generic Zod request validation middleware
+│   │   ├── request-logger.middleware.ts # Incoming request logging
 │   │   ├── jwtverf.ts             # (Legacy token verification)
 │   │   └── middleware.ts          # (Legacy validation and error middleware)
 │   ├── models/
-│   │   └── user.ts            # Sequelize User model schema
+│   │   ├── user.ts            # Sequelize User model schema
+│   │   └── product.ts         # Sequelize Product model schema
 │   └── modules/
-│       └── auth/              # Authentication & User Management module
+│       ├── auth/              # Authentication & User Management module
 │           ├── auth.controller.ts # HTTP request/response handler
 │           ├── auth.service.ts    # Core business logic
 │           ├── auth.repository.ts # Database queries and Sequelize operations
@@ -63,6 +67,14 @@ Supply Chain Monitor-back-end/
 │           ├── auth.validation.ts # Zod validation schemas
 │           ├── auth.types.ts      # Enums, interfaces, and role types
 │           └── auth.dto.ts        # Data Transfer Objects (Input & Output DTOs)
+│       └── adding/            # Product creation module
+│           ├── adding.controller.ts
+│           ├── adding.service.ts
+│           ├── adding.repository.ts
+│           ├── adding.routes.ts
+│           ├── adding.validation.ts
+│           ├── adding.types.ts
+│           └── adding.dto.ts
 ```
 
 ---
@@ -86,7 +98,7 @@ Supply Chain Monitor-back-end/
 | File | Description |
 | :--- | :--- |
 | `src/server.ts` | **Application Entry Point:** Connects to PostgreSQL, instantiates the Express application, mounts Apollo Server at `/graphql`, and starts listening on the configured port (`env.port`). |
-| `src/app.ts` | **Express Application Factory (`createApp`):** Sets up standard middlewares (CORS, Express JSON Body Parser), registers REST API routes under `/api`, the health check route (`/health`), and the test reset endpoint (`POST /reset`), and attaches centralized error handling. |
+| `src/app.ts` | **Express Application Factory (`createApp`):** Sets up standard middlewares (CORS, Express JSON Body Parser, and request logging), registers authentication and product routes under `/api`, the health check route (`/health`), and the user reset endpoint (`POST /reset`), and attaches centralized error handling. |
 | `src/db.ts` | **Database Initialization:** Establishes the Sequelize connection to PostgreSQL and exports `connectDB()` to test the connection and synchronize models (`sequelize.sync()`). |
 | `src/config/env.ts` | **Environment Variable Management:** Programmatically validates mandatory variables (`JWT_SECRET`, DB credentials) and exports a strongly-typed `env` object. |
 
@@ -107,6 +119,7 @@ Supply Chain Monitor-back-end/
 | `src/middleware/auth.middleware.ts` | Route protection middleware (`authenticateJWT`); extracts Bearer tokens from `Authorization: Bearer <token>`, verifies JWT validity, and attaches the authenticated user payload to `req.user`. |
 | `src/middleware/validate.middleware.ts` | Higher-order validation middleware (`validate(schema)`); validates `req.body` against a given Zod schema and forwards validation failures to the centralized error handler. |
 | `src/middleware/error.middleware.ts` | Centralized error handler (`errorMiddleware`); catches Zod validation errors to format field-level error responses with HTTP `400`, handles application errors, and returns consistent error JSON. |
+| `src/middleware/request-logger.middleware.ts` | Logs the method and path of each incoming request, and includes the body when present. |
 | `src/middleware/jwtverf.ts` | *(Legacy)* Previous token verification helper replaced by `auth.middleware.ts`. |
 | `src/middleware/middleware.ts` | *(Legacy)* Previous error and validation functions replaced by modular middlewares. |
 
@@ -117,6 +130,7 @@ Supply Chain Monitor-back-end/
 | File | Description |
 | :--- | :--- |
 | `src/models/user.ts` | Sequelize `User` model: defines the schema for the `users` table (`id` as UUID, `name`, unique `email`, hashed `password`, and `role` as an Enum of user roles). |
+| `src/models/product.ts` | Sequelize `Product` model for product details, quantities, and the associated manufacturer. |
 
 ---
 
@@ -136,13 +150,30 @@ Follows clean layered architecture for clear separation of concerns:
 
 ---
 
-### 7. Automated Tests (`tests/`)
+### 7. Product Creation Module (`src/modules/adding/`)
+
+This module allows authenticated users with the `MANUFACTURER` role to add products:
+
+| File | Description |
+| :--- | :--- |
+| `src/modules/adding/adding.routes.ts` | Defines the product creation route and applies JWT authentication and request validation. |
+| `src/modules/adding/adding.controller.ts` | Handles product creation requests and returns success or error responses. |
+| `src/modules/adding/adding.service.ts` | Checks the user and role, then associates the product with the manufacturer. |
+| `src/modules/adding/adding.repository.ts` | Creates the product record in the database. |
+| `src/modules/adding/adding.validation.ts` | Validates the input, requiring a name of at least 3 characters, quantity of at least 1000, and a minimum quantity no greater than the maximum. |
+| `src/modules/adding/adding.dto.ts` and `adding.types.ts` | Product input, output, and type definitions. |
+
+---
+
+### 8. Automated Tests (`tests/`)
 
 | File / Folder | Description |
 | :--- | :--- |
-| `tests/helper.ts` | **Testing Utilities:** Helper functions for integration tests: `resetDatabase` (truncates tables via `/reset`), `createUser` (creates a test user via API), `login` (authenticates and extracts a JWT token), and `resetAndSeed` (resets DB and seeds test users/tokens). |
+| `tests/helper.ts` | **Testing Utilities:** Helper functions for integration tests: `resetDatabase` (clears user data via `/reset`), `createUser` (creates a test user via API), `login` (authenticates and extracts a JWT token), and `resetAndSeed` (resets DB and seeds test users/tokens). |
 | `tests/health ckheck/health.test.ts` | **Health Check Test:** Verifies `GET /health` using `supertest` against in-memory `createApp()`, ensuring HTTP `200` and `{ status: 'ok', service: '...' }` response. |
 | `tests/auth tests/register.test.ts` | **Authentication Tests:** Tests user registration endpoints and validation behavior for valid and invalid inputs. |
+| `tests/auth tests/login.test.ts` | Tests login behavior. |
+| `tests/auth tests/updaterole.test.ts` | Tests user role updates. |
 
 ---
 
@@ -154,8 +185,7 @@ All REST routes are prefixed with `/api` (except general/test endpoints):
 - `GET /health`
   - **Purpose:** Verifies server availability and health status.
 - `POST /reset`
-  - **Purpose:** Truncates database tables and resets identity counters (`TRUNCATE TABLE ... RESTART IDENTITY CASCADE`).
-  - **Usage:** Testing and development helper to isolate test cases.
+  - **Purpose:** Deletes data from the `users` table and resets its identity; intended for tests.
 
 ### 2. Authentication (`/api/auth`)
 - `POST /api/auth/register`
@@ -174,7 +204,23 @@ All REST routes are prefixed with `/api` (except general/test endpoints):
     - Assigning `SUPER_ADMIN` role via API is strictly forbidden.
     - Only users with the current role of `CUSTOMER` are eligible for role modification. Once upgraded, roles cannot be modified.
 
-### 3. GraphQL Endpoint
+### 3. Products (`/api/service`)
+- `POST /api/service/addproduct`
+  - **Purpose:** Adds a product and associates it with the authenticated manufacturer account.
+  - **Access:** Requires a JWT and the user's role must be `MANUFACTURER`.
+  - **Body:**
+    ```json
+    {
+      "name": "Product name",
+      "quantity": 1000,
+      "min_avalabil_qaun": 10,
+      "max_avalabil_qaun": 100
+    }
+    ```
+  - `name` must contain at least 3 characters, `quantity` must be at least 1000, and `min_avalabil_qaun` must not exceed `max_avalabil_qaun`.
+  - **Success response:** `201` with `{ "message": "Product added successfully" }`.
+
+### 4. GraphQL Endpoint
 - `POST /graphql` (or open in browser for Apollo Sandbox):
   - Supports health check query:
     ```graphql

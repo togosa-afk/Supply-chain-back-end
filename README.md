@@ -37,7 +37,9 @@ Supply Chain Monitor-back-end/
 │   ├── health ckheck/
 │   │   └── health.test.ts     # اختبار فحص صحة التطبيق عبر Supertest
 │   └── auth tests/
-│       └── register.test.ts   # اختبارات تسجيل الحساب والمصادقة
+│       ├── register.test.ts   # اختبارات التسجيل
+│       ├── login.test.ts      # اختبارات تسجيل الدخول
+│       └── updaterole.test.ts # اختبارات تحديث الدور
 ├── src/
 │   ├── app.ts                 # إعداد تطبيق Express والميدلويرز ومسارات الاختبار
 │   ├── server.ts              # نقطة البداية وتشغيل السيرفر وقاعدة البيانات و GraphQL
@@ -50,12 +52,14 @@ Supply Chain Monitor-back-end/
 │   │   ├── auth.middleware.ts     # التحقق من مصادقة التوكن (JWT)
 │   │   ├── error.middleware.ts    # معالجة الأخطاء المركزية
 │   │   ├── validate.middleware.ts # التحقق من صحة الطلبات عبر Zod
+│   │   ├── request-logger.middleware.ts # تسجيل الطلبات الواردة
 │   │   ├── jwtverf.ts             # (ملف قديم تم استبداله بـ auth.middleware)
 │   │   └── middleware.ts          # (ملف قديم تم استبداله بـ validate و error middlewares)
 │   ├── models/
-│   │   └── user.ts            # نموذج جدول المستخدمين (Sequelize Model)
+│   │   ├── user.ts            # نموذج جدول المستخدمين (Sequelize Model)
+│   │   └── product.ts         # نموذج جدول المنتجات (Sequelize Model)
 │   └── modules/
-│       └── auth/              # وحدة المصادقة وإدارة المستخدمين
+│       ├── auth/              # وحدة المصادقة وإدارة المستخدمين
 │           ├── auth.controller.ts # معالجة طلبات واستجابات HTTP
 │           ├── auth.service.ts    # منطق الأعمال (Business Logic)
 │           ├── auth.repository.ts # الوصول لقاعدة البيانات وعمليات Sequelize
@@ -63,6 +67,14 @@ Supply Chain Monitor-back-end/
 │           ├── auth.validation.ts # قواعد التحقق من المدخلات عبر Zod
 │           ├── auth.types.ts      # تعريف الـ Enums والواجهات الأساسية
 │           └── auth.dto.ts        # كائنات نقل البيانات (Input & Output DTOs)
+│       └── adding/            # وحدة إضافة المنتجات
+│           ├── adding.controller.ts
+│           ├── adding.service.ts
+│           ├── adding.repository.ts
+│           ├── adding.routes.ts
+│           ├── adding.validation.ts
+│           ├── adding.types.ts
+│           └── adding.dto.ts
 ```
 
 ---
@@ -86,7 +98,7 @@ Supply Chain Monitor-back-end/
 | الملف | الوظيفة والشرح |
 | :--- | :--- |
 | `src/server.ts` | **نقطة الدخول الرئيسية للتطبيق (Entry Point):** يقوم بالاتصال بقاعدة البيانات، تشغيل تطبيق Express، دمج خادم Apollo Server لمسار GraphQL (`/graphql`)، وتشغيل السيرفر للإنصات على المنفذ المحدد عبر كائن `env.port`. |
-| `src/app.ts` | **مصنع تطبيق Express (`createApp`):** يقوم بإعداد الميدلويرز العامة (CORS, Express JSON Body Parser)، وتسجيل مسارات الـ REST API تحت البادئة `/api`، ومسار فحص الحالة (`/health`)، ومسار تصفير البيانات (`POST /reset`) المخصص لبيئة الاختبارات، وربط معالج الأخطاء المركزي. |
+| `src/app.ts` | **مصنع تطبيق Express (`createApp`):** يقوم بإعداد الميدلويرز العامة (CORS, Express JSON Body Parser، وتسجيل الطلبات)، وتسجيل مسارات المصادقة والمنتجات تحت البادئة `/api`، ومسار فحص الحالة (`/health`)، ومسار تصفير بيانات المستخدمين (`POST /reset`) المخصص للاختبارات، وربط معالج الأخطاء المركزي. |
 | `src/db.ts` | **تهيئة قاعدة البيانات:** يقوم بإنشاء اتصال Sequelize بقاعدة بيانات PostgreSQL باستخدام إعدادات البيئة، ويصدر دالة `connectDB()` لاختبار الاتصال ومزامنة الجداول (`sequelize.sync()`). |
 | `src/config/env.ts` | **إدارة إعدادات البيئة:** يتحقق برمجياً من وجود المتغيرات الإلزامية مثل `JWT_SECRET` وبيانات قاعدة البيانات ويطلق خطأ واضح في حال غياب أي متغير، مع تصدير كائن `env` موحد وآمن لجميع أجزاء المشروع. |
 
@@ -107,6 +119,7 @@ Supply Chain Monitor-back-end/
 | `src/middleware/auth.middleware.ts` | ميدلوير حماية المسارات (`authenticateJWT`)، يستخرج الـ Token من ترويسة الطلب `Authorization: Bearer <token>` ويتحقق من صحته عبر JWT، ثم يحقن بيانات المستخدم في `req.user`. |
 | `src/middleware/validate.middleware.ts` | ميدلوير عالي الرتبة (`validate(schema)`) يقبل أي Zod Schema ويفحص محتوى `req.body` قبل وصول الطلب للكنترولر، وفي حال وجود أخطاء يمررها فوراً لمعالج الأخطاء. |
 | `src/middleware/error.middleware.ts` | معالج الأخطاء المركزي (`errorMiddleware`)، يتعامل باحترافية مع أخطاء التحقق القادمة من Zod ويرجع تفاصيل الحقول بحالة `400`، كما يعالج الأخطاء العامة ويرجع رسائل واضحة بأكواد الاستجابة المناسبة. |
+| `src/middleware/request-logger.middleware.ts` | يسجل طريقة ومسار كل طلب وارد، ويضيف محتوى الجسم عند وجوده. |
 | `src/middleware/jwtverf.ts` | *(ملف سابق/Legacy)* وظيفة سابقة لفحص التوكن، تم استبدال استخدامها في المسارات بـ `auth.middleware.ts`. |
 | `src/middleware/middleware.ts` | *(ملف سابق/Legacy)* وظائف تحقق ومعالجة أخطاء سابقة، تم استبدال استخدامها بالنسخ المعيارية المنفصلة. |
 
@@ -117,6 +130,7 @@ Supply Chain Monitor-back-end/
 | الملف | الوظيفة والشرح |
 | :--- | :--- |
 | `src/models/user.ts` | نموذج جدول المستخدمين `User` في Sequelize: يحدد هيكل جدول `users` في قاعدة البيانات (الحقول: `id` كـ UUID، `name`، `email` فريد، `password` المشفرة، و `role` كـ Enum لأدوار المستخدمين). |
+| `src/models/product.ts` | نموذج جدول المنتجات `Product` في Sequelize، ويضم بيانات المنتج والكميات المتاحة وبيانات الشركة المصنّعة. |
 
 ---
 
@@ -136,13 +150,30 @@ Supply Chain Monitor-back-end/
 
 ---
 
-### 7. مجلد الاختبارات الآلية (`tests/`)
+### 7. وحدة إضافة المنتجات (`src/modules/adding/`)
+
+تتيح هذه الوحدة للمستخدمين ذوي دور `MANUFACTURER` إضافة المنتجات:
+
+| الملف | الوظيفة والشرح |
+| :--- | :--- |
+| `src/modules/adding/adding.routes.ts` | يعرّف مسار إضافة المنتج ويحميه بميدلوير JWT والتحقق من المدخلات. |
+| `src/modules/adding/adding.controller.ts` | يعالج طلب إضافة المنتج ويرجع استجابة النجاح أو الخطأ. |
+| `src/modules/adding/adding.service.ts` | يتحقق من وجود المستخدم ودوره، ثم يربط المنتج بالشركة المصنّعة. |
+| `src/modules/adding/adding.repository.ts` | ينشئ سجل المنتج في قاعدة البيانات. |
+| `src/modules/adding/adding.validation.ts` | يتحقق من الحقول، ومن أن الاسم لا يقل عن 3 أحرف والكمية لا تقل عن 1000، وأن الحد الأدنى لا يتجاوز الحد الأقصى. |
+| `src/modules/adding/adding.dto.ts` و `adding.types.ts` | تعريفات بيانات المنتج والمدخلات والمخرجات. |
+
+---
+
+### 8. مجلد الاختبارات الآلية (`tests/`)
 
 | الملف / المجلد | الوظيفة والشرح |
 | :--- | :--- |
-| `tests/helper.ts` | **أدوات ودوال مساعدة للاختبارات (Test Utilities):** يحتوي على دوال تسهيل وتوحيد بيئة الاختبار: `resetDatabase` (لتنظيف الجداول عبر `/reset`)، و `createUser` (لإنشاء مستخدم تجريبي عبر API)، و `login` (لتسجيل الدخول واستخراج JWT Token)، و `resetAndSeed` (لإعادة ضبط القاعدة وإنشاء مستخدمين وتوكنات جاهزة للفحص). |
+| `tests/helper.ts` | **أدوات ودوال مساعدة للاختبارات (Test Utilities):** يحتوي على دوال تسهيل وتوحيد بيئة الاختبار: `resetDatabase` (لحذف بيانات المستخدمين عبر `/reset`)، و `createUser` (لإنشاء مستخدم تجريبي عبر API)، و `login` (لتسجيل الدخول واستخراج JWT Token)، و `resetAndSeed` (لإعادة ضبط القاعدة وإنشاء مستخدمين وتوكنات جاهزة للفحص). |
 | `tests/health ckheck/health.test.ts` | **اختبار فحص حالة التطبيق:** يختبر مسار `GET /health` مباشرة باستخدام مكتبة `supertest` بالحقن المباشر لتطبيق `createApp()` والتحقق من كود الاستجابة `200` ومطابقة بنية الجسم `{ status: 'ok', service: '...' }`. |
-| `tests/auth tests/register.test.ts` | **اختبارات وحدة المصادقة والتسجيل:** يختبر عمليات تسجيل المستخدمين الجدد وتفاعل المسارات مع البيانات الصحيحة وغير الصحيحة. |
+| `tests/auth tests/register.test.ts` | يختبر تسجيل المستخدمين والتحقق من البيانات. |
+| `tests/auth tests/login.test.ts` | يختبر تسجيل الدخول. |
+| `tests/auth tests/updaterole.test.ts` | يختبر تحديث أدوار المستخدمين. |
 
 ---
 
@@ -154,8 +185,7 @@ Supply Chain Monitor-back-end/
 - `GET /health`
   - **الوظيفة:** فحص حالة السيرفر للتأكد من عمله وتوافره.
 - `POST /reset`
-  - **الوظيفة:** تصفير جداول قاعدة البيانات وإعادة ترقيم المفاتيح (`TRUNCATE TABLE ... RESTART IDENTITY CASCADE`).
-  - **الاستخدام:** مخصص لبيئة التطوير والاختبارات الآلية (Testing Helper) لضمان عزل البيانات بين الاختبارات.
+  - **الوظيفة:** حذف بيانات جدول المستخدمين (`users`) وإعادة ضبط الهوية؛ مخصص للاختبارات.
 
 ### 2. المصادقة (`/api/auth`)
 - `POST /api/auth/register`
@@ -174,7 +204,23 @@ Supply Chain Monitor-back-end/
     - يمنع منعاً باتاً إسناد دور مدير النظام (`SUPER_ADMIN`) عبر الـ API.
     - يُسمح بتعديل الدور فقط إذا كان الحساب حالياً يحمل دور عميل (`CUSTOMER`)، ولا يمكن تغيير الدور لأي مستخدم تم ترقيته مسبقاً.
 
-### 3. مسار GraphQL
+### 3. المنتجات (`/api/service`)
+- `POST /api/service/addproduct`
+  - **الوظيفة:** إضافة منتج وربطه بحساب الشركة المصنّعة المسجّل دخوله.
+  - **الحماية:** يتطلب JWT، ومتاح فقط لحساب بدور `MANUFACTURER`.
+  - **المدخلات:**
+    ```json
+    {
+      "name": "Product name",
+      "quantity": 1000,
+      "min_avalabil_qaun": 10,
+      "max_avalabil_qaun": 100
+    }
+    ```
+  - يجب أن يكون `name` بطول 3 أحرف على الأقل، و`quantity` لا تقل عن 1000، و`min_avalabil_qaun` لا تتجاوز `max_avalabil_qaun`.
+  - **الاستجابة عند النجاح:** `201` مع `{ "message": "Product added successfully" }`.
+
+### 4. مسار GraphQL
 - `POST /graphql` (أو عبر المتصفح لفتح واجهة Apollo Sandbox):
   - يدعم استعلام الفحص:
     ```graphql
