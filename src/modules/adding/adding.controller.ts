@@ -9,8 +9,11 @@ export const add = async (req: AuthRequest, res: Response): Promise<void> => {
       res.status(404).json({ message: 'User not found' });
       return;
     }
-    await productService.add(userId, req.body);
-    res.status(201).json({ message: 'Product added successfully' });
+    const product = await productService.add(userId, req.body);
+    res.status(201).json({
+      message: 'Product added successfully',
+      product,
+    });
   } catch (error) {
     if (error instanceof Error && error.message === 'USER_NOT_FOUND') {
       res.status(404).json({ message: 'User not found' });
