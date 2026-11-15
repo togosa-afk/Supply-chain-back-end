@@ -26,6 +26,7 @@ const add = async (userId: string, data: ProductDto): Promise<ProductResponseDto
     combany_id: product.combany_id,
     min_avalabil_qaun: product.min_avalabil_qaun,
     max_avalabil_qaun: product.max_avalabil_qaun,
+    img_url: product.img_url
   };
 };
 

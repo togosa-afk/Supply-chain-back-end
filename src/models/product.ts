@@ -15,6 +15,7 @@ class Product extends Model<InferAttributes<Product>, InferCreationAttributes<Pr
 	declare combany_id: string
 	declare min_avalabil_qaun: number
 	declare max_avalabil_qaun: number
+	declare img_url: string
 }
 
 Product.init({
@@ -45,6 +46,10 @@ Product.init({
 	},
 	max_avalabil_qaun: {
 		type: DataTypes.INTEGER,
+		allowNull: false
+	},
+	img_url: {
+		type: DataTypes.STRING,
 		allowNull: false
 	}
 },
