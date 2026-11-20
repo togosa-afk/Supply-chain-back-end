@@ -3,6 +3,8 @@ import { authService } from './auth.service';
 import { UserRole, type globalRole } from './auth.types';
 import { AuthRequest } from '../../middleware/auth.middleware';
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     await authService.register(req.body);
@@ -13,7 +15,12 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     } else if (error instanceof Error && error.message === 'CAN\'T_REGISTER_WITH_THIS_ROLR') {
       res.status(403).json({ message: 'Cannot assign SUPER_ADMIN role' })
     } else {
-      res.status(500).json({ message: 'Internal server error' });
+      console.error('[REGISTER ERROR]', error);
+      res.status(500).json({
+        message: 'Internal server error',
+        ...(isDev && { error: error instanceof Error ? error.message : String(error) }),
+        ...(isDev && error instanceof Error && { stack: error.stack }),
+      });
     }
   }
 };
@@ -30,10 +37,18 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       } else if (error.message === 'INVALID_CREDENTIALS') {
         res.status(401).json({ message: 'Invalid credentials' });
       } else {
-        res.status(500).json({ message: 'Internal server error' });
+        console.error('[LOGIN ERROR]', error);
+        res.status(500).json({
+          message: 'Internal server error',
+          ...(isDev && { error: error.message, stack: error.stack }),
+        });
       }
     } else {
-      res.status(500).json({ message: 'Internal server error' });
+      console.error('[LOGIN ERROR]', error);
+      res.status(500).json({
+        message: 'Internal server error',
+        ...(isDev && { error: String(error) }),
+      });
     }
   }
 };
@@ -56,7 +71,12 @@ export const updateRole = async (req: AuthRequest, res: Response): Promise<void>
     } else if (error instanceof Error && error.message === 'CAN\'T_CHANGE_ROLE') {
       res.status(403).json({ message: 'Cannot change role' });
     } else {
-      res.status(500).json({ message: 'Internal server error' });
+      console.error('[UPDATE_ROLE ERROR]', error);
+      res.status(500).json({
+        message: 'Internal server error',
+        ...(isDev && { error: error instanceof Error ? error.message : String(error) }),
+        ...(isDev && error instanceof Error && { stack: error.stack }),
+      });
     }
   }
 };

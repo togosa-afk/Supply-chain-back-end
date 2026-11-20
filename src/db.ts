@@ -10,7 +10,7 @@ const sequelize = new Sequelize(env.db.name, env.db.user, env.db.pass, {
 
 export const connectDB = async (): Promise<void> => {
   await sequelize.authenticate();
-  await sequelize.sync();
+  await sequelize.sync({ alter: true });
   console.log('PostgreSQL connected and models synchronized successfully.');
 };
 

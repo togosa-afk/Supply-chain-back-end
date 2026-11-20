@@ -2,6 +2,8 @@ import { Response } from 'express';
 import { productService } from './adding.service';
 import { AuthRequest } from '../../middleware/auth.middleware';
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 export const add = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
@@ -20,7 +22,12 @@ export const add = async (req: AuthRequest, res: Response): Promise<void> => {
     } else if (error instanceof Error && error.message === 'CAN\'T_ADD_PRODUCTS_WITH_THIS_ROLR') {
       res.status(403).json({ message: 'Cannot add products with this role' });
     } else {
-      res.status(500).json({ message: 'Internal server error' });
+      console.error('[ADD_PRODUCT ERROR]', error);
+      res.status(500).json({
+        message: 'Internal server error',
+        ...(isDev && { error: error instanceof Error ? error.message : String(error) }),
+        ...(isDev && error instanceof Error && { stack: error.stack }),
+      });
     }
   }
 };
