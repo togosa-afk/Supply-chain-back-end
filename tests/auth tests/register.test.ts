@@ -73,10 +73,10 @@ describe('register', () => {
     const res = await api.post('/api/auth/register').send(validUser)
     expect(res.status).toBe(201)
     const user = await User.findOne({ where: { email: validUser.email } })
-    expect(user?.password).not.toBe(validUser.password)
+    expect(user?.password_hash).not.toBe(validUser.password)
     expect(res.body).toHaveProperty('message', 'User registered successfully')
     expect(res.body).not.toHaveProperty('password')
-    expect(await bcrypt.compare(validUser.password, user!.password)).toBe(true);
+    expect(await bcrypt.compare(validUser.password, user!.password_hash)).toBe(true);
   })
 
   it('should register user with CUSTOMER role when no role is provided', async () => {

@@ -10,12 +10,14 @@ const register = async (data: RegisterDto): Promise<void> => {
   if (existing) throw new Error('EMAIL_EXISTS');
 
   const passwordHash = await bcrypt.hash(data.password, 10);
-  if (data.role === UserRole.SUPER_ADMIN) {
+  if ((data.role as UserRole) === UserRole.SUPER_ADMIN) {
     throw new Error('CAN\'T_REGISTER_WITH_THIS_ROLR')
   }
+
   await userRepository.create({
-    ...data,
-    password: passwordHash,
+    name: data.name,
+    email: data.email,
+    password_hash: passwordHash,
     role: UserRole.CUSTOMER,
   });
 };
@@ -24,7 +26,7 @@ const login = async (email: string, password: string): Promise<LoginResponseDto>
   const user = await userRepository.findByEmail(email);
   if (!user) throw new Error('USER_NOT_FOUND');
 
-  const passwordMatch = await bcrypt.compare(password, user.password);
+  const passwordMatch = await bcrypt.compare(password, user.password_hash);
   if (!passwordMatch) throw new Error('INVALID_CREDENTIALS');
 
   const token = jwt.sign(

@@ -14,7 +14,7 @@ const add = async (userId: string, data: ProductDto): Promise<ProductResponseDto
 
   const product = await productRepository.create({
     ...data,
-    combany_id: existing.id,
+    manufacturer_id: existing.id,
     company_name: existing.name,
   });
 
@@ -23,10 +23,13 @@ const add = async (userId: string, data: ProductDto): Promise<ProductResponseDto
     name: product.name,
     quantity: product.quantity,
     company_name: product.company_name,
-    combany_id: product.combany_id,
-    min_avalabil_qaun: product.min_avalabil_qaun,
-    max_avalabil_qaun: product.max_avalabil_qaun,
-    img_url: product.img_url
+    manufacturer_id: product.manufacturer_id,
+    min_order_qaun: product.min_order_qaun,
+    max_order_qaun: product.max_order_qaun,
+    img_url: product.img_url,
+    discription: product.discription,
+    is_active: product.is_active,
+    created_at: new Date(product.created_at),
   };
 };
 
